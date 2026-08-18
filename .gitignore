@@ -1,0 +1,4 @@
+node_modules/
+data/usuarios.json
+data/clases.json
+*.log

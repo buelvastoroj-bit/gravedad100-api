@@ -1,0 +1,14 @@
+{
+  "name": "gravedad100-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gravedad100 - API REST de autenticacion y Clases y horarios (GA7-220501096-AA5-EV03)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
