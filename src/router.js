@@ -1,4 +1,4 @@
-import { enviarJSON } from "./utils/httpUtils.js";
+import { enviarJSON, responderPreflight } from "./utils/httpUtils.js";
 import { manejarRegistro, manejarLogin } from "./controllers/authController.js";
 import {
   manejarListar,
@@ -38,6 +38,12 @@ function extraerIdDeRuta(pathname, prefijo) {
 export async function enrutar(req, res) {
   const { method } = req;
   const { pathname } = new URL(req.url, "http://localhost");
+
+  // ---- CORS preflight (el navegador lo envia antes de POST/PUT/DELETE) ----
+  if (method === "OPTIONS") {
+    responderPreflight(res);
+    return;
+  }
 
   // ---- Informacion general ----
   if (method === "GET" && pathname === "/") {

@@ -44,6 +44,9 @@ export function leerCuerpoJSON(req) {
 
 /**
  * Envia una respuesta HTTP en formato JSON con el codigo de estado indicado.
+ * Incluye cabeceras CORS para que la API pueda ser consumida desde el
+ * componente frontend en React (que corre en un origen distinto,
+ * http://localhost:5173, durante el desarrollo).
  *
  * @param {import('http').ServerResponse} res
  * @param {number} codigoEstado - Codigo HTTP (200, 400, 401, 404, etc.)
@@ -54,6 +57,23 @@ export function enviarJSON(res, codigoEstado, cuerpo) {
   res.writeHead(codigoEstado, {
     "Content-Type": "application/json; charset=utf-8",
     "Content-Length": Buffer.byteLength(texto),
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
   });
   res.end(texto);
+}
+
+/**
+ * Responde a una peticion OPTIONS (preflight de CORS) que el navegador
+ * envia automaticamente antes de un POST/PUT/DELETE con cuerpo JSON.
+ * @param {import('http').ServerResponse} res
+ */
+export function responderPreflight(res) {
+  res.writeHead(204, {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+  res.end();
 }
