@@ -1,4 +1,5 @@
 import { enviarJSON, responderPreflight } from "./utils/httpUtils.js";
+import { verificarToken } from "./utils/tokenUtils.js";
 import { manejarRegistro, manejarLogin } from "./controllers/authController.js";
 import {
   manejarListar,
@@ -15,19 +16,12 @@ import {
  * - /api/registro, /api/login       -> autenticacion de usuarios (AA5_EV01)
  * - /api/clases, /api/clases/:id    -> gestion de clases y horarios (AA5_EV03)
  *
- * Implementado sobre el modulo nativo "http", con soporte manual para
- * segmentos de ruta dinamicos (:id), sin depender de un framework externo.
+ * A partir de esta version, las operaciones que MODIFICAN datos de clases
+ * (crear, editar, eliminar) requieren un token valido en la cabecera
+ * "Authorization: Bearer <token>", obtenido previamente en /api/login.
+ * Las consultas (GET) permanecen abiertas.
  */
 
-/**
- * Intenta hacer match de una ruta como /api/clases/123 contra el patron
- * /api/clases/:id, extrayendo el id como numero.
- *
- * @param {string} pathname - Ej: "/api/clases/5"
- * @param {string} prefijo  - Ej: "/api/clases/"
- * @returns {number|null} El id extraido, o null si no coincide con el patron
- *                         (por ejemplo, no es un numero valido).
- */
 function extraerIdDeRuta(pathname, prefijo) {
   if (!pathname.startsWith(prefijo)) return null;
   const resto = pathname.slice(prefijo.length);
@@ -35,17 +29,31 @@ function extraerIdDeRuta(pathname, prefijo) {
   return Number(resto);
 }
 
+/**
+ * Extrae y valida el token de la cabecera Authorization. Si es invalido
+ * o falta, responde 401 y retorna false; si es valido, retorna true.
+ */
+function exigirToken(req, res) {
+  const cabecera = req.headers["authorization"] || "";
+  const token = cabecera.startsWith("Bearer ") ? cabecera.slice(7) : null;
+  try {
+    verificarToken(token);
+    return true;
+  } catch (error) {
+    enviarJSON(res, 401, { mensaje: error.message });
+    return false;
+  }
+}
+
 export async function enrutar(req, res) {
   const { method } = req;
   const { pathname } = new URL(req.url, "http://localhost");
 
-  // ---- CORS preflight (el navegador lo envia antes de POST/PUT/DELETE) ----
   if (method === "OPTIONS") {
     responderPreflight(res);
     return;
   }
 
-  // ---- Informacion general ----
   if (method === "GET" && pathname === "/") {
     enviarJSON(res, 200, {
       servicio: "API Gravedad100 - Autenticacion y Clases y horarios",
@@ -55,15 +63,14 @@ export async function enrutar(req, res) {
         { metodo: "POST", ruta: "/api/login" },
         { metodo: "GET", ruta: "/api/clases" },
         { metodo: "GET", ruta: "/api/clases/:id" },
-        { metodo: "POST", ruta: "/api/clases" },
-        { metodo: "PUT", ruta: "/api/clases/:id" },
-        { metodo: "DELETE", ruta: "/api/clases/:id" },
+        { metodo: "POST", ruta: "/api/clases (requiere token)" },
+        { metodo: "PUT", ruta: "/api/clases/:id (requiere token)" },
+        { metodo: "DELETE", ruta: "/api/clases/:id (requiere token)" },
       ],
     });
     return;
   }
 
-  // ---- Autenticacion ----
   if (method === "POST" && pathname === "/api/registro") {
     await manejarRegistro(req, res);
     return;
@@ -73,17 +80,16 @@ export async function enrutar(req, res) {
     return;
   }
 
-  // ---- Clases: colección ----
   if (method === "GET" && pathname === "/api/clases") {
     await manejarListar(req, res);
     return;
   }
   if (method === "POST" && pathname === "/api/clases") {
+    if (!exigirToken(req, res)) return;
     await manejarCrear(req, res);
     return;
   }
 
-  // ---- Clases: recurso individual (/api/clases/:id) ----
   const idClase = extraerIdDeRuta(pathname, "/api/clases/");
   if (idClase !== null) {
     if (method === "GET") {
@@ -91,10 +97,12 @@ export async function enrutar(req, res) {
       return;
     }
     if (method === "PUT") {
+      if (!exigirToken(req, res)) return;
       await manejarActualizar(req, res, idClase);
       return;
     }
     if (method === "DELETE") {
+      if (!exigirToken(req, res)) return;
       await manejarEliminar(req, res, idClase);
       return;
     }

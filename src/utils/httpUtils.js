@@ -59,7 +59,7 @@ export function enviarJSON(res, codigoEstado, cuerpo) {
     "Content-Length": Buffer.byteLength(texto),
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
   res.end(texto);
 }
@@ -73,7 +73,7 @@ export function responderPreflight(res) {
   res.writeHead(204, {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
   res.end();
 }

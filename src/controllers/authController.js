@@ -1,5 +1,6 @@
 import { leerCuerpoJSON, enviarJSON } from "../utils/httpUtils.js";
 import { registrarUsuario, iniciarSesion, ErrorDeNegocio } from "../services/usuarioService.js";
+import { generarToken } from "../utils/tokenUtils.js";
 
 /**
  * Controlador HTTP para las operaciones de registro e inicio de sesion.
@@ -31,17 +32,19 @@ export async function manejarRegistro(req, res) {
  * Autentica a un usuario a partir de { usuario, contrasena } en el
  * cuerpo de la peticion.
  *
- * Responde con "Autenticacion satisfactoria" si las credenciales son
- * correctas, o "Error en la autenticacion" en caso contrario, tal como
- * especifica el enunciado del caso.
+ * Responde con "Autenticacion satisfactoria" y un token firmado si las
+ * credenciales son correctas, o "Error en la autenticacion" en caso
+ * contrario, tal como especifica el enunciado del caso.
  */
 export async function manejarLogin(req, res) {
   try {
     const datos = await leerCuerpoJSON(req);
     const usuarioAutenticado = iniciarSesion(datos);
+    const token = generarToken(usuarioAutenticado.usuario);
     enviarJSON(res, 200, {
       mensaje: "Autenticacion satisfactoria.",
       usuario: usuarioAutenticado.usuario,
+      token,
     });
   } catch (error) {
     manejarError(res, error);
