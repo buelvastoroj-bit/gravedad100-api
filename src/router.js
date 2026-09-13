@@ -8,20 +8,27 @@ import {
   manejarActualizar,
   manejarEliminar,
 } from "./controllers/clasesController.js";
+import {
+  manejarListarClientes,
+  manejarRegistrarCliente,
+  manejarCheckin,
+  manejarListarCheckins,
+} from "./controllers/clientesController.js";
 
 /**
  * Enrutador de la API REST del proyecto Gravedad100.
  *
- * Agrupa dos familias de endpoints:
- * - /api/registro, /api/login       -> autenticacion de usuarios (AA5_EV01)
- * - /api/clases, /api/clases/:id    -> gestion de clases y horarios (AA5_EV03)
+ * Agrupa tres familias de endpoints:
+ * - /api/registro, /api/login              -> autenticacion (AA5_EV01)
+ * - /api/clases, /api/clases/:id           -> Clases y horarios (AA5_EV03)
+ * - /api/clientes, /api/clientes/:id/checkin, /api/checkins
+ *                                            -> Recepcion de clientes (RF-01)
  *
- * A partir de esta version, las operaciones que MODIFICAN datos de clases
- * (crear, editar, eliminar) requieren un token valido en la cabecera
- * "Authorization: Bearer <token>", obtenido previamente en /api/login.
- * Las consultas (GET) permanecen abiertas.
+ * Las operaciones que MODIFICAN datos requieren un token valido en la
+ * cabecera "Authorization: Bearer <token>", obtenido en /api/login.
  */
 
+/** Extrae un id numerico al final de una ruta (ej: /api/clases/5 -> 5). */
 function extraerIdDeRuta(pathname, prefijo) {
   if (!pathname.startsWith(prefijo)) return null;
   const resto = pathname.slice(prefijo.length);
@@ -29,10 +36,6 @@ function extraerIdDeRuta(pathname, prefijo) {
   return Number(resto);
 }
 
-/**
- * Extrae y valida el token de la cabecera Authorization. Si es invalido
- * o falta, responde 401 y retorna false; si es valido, retorna true.
- */
 function exigirToken(req, res) {
   const cabecera = req.headers["authorization"] || "";
   const token = cabecera.startsWith("Bearer ") ? cabecera.slice(7) : null;
@@ -56,8 +59,7 @@ export async function enrutar(req, res) {
 
   if (method === "GET" && pathname === "/") {
     enviarJSON(res, 200, {
-      servicio: "API Gravedad100 - Autenticacion y Clases y horarios",
-      evidencia: "GA7-220501096-AA5-EV03",
+      servicio: "API Gravedad100 - Autenticacion, Clases y horarios, Recepcion de clientes",
       endpoints: [
         { metodo: "POST", ruta: "/api/registro" },
         { metodo: "POST", ruta: "/api/login" },
@@ -66,6 +68,10 @@ export async function enrutar(req, res) {
         { metodo: "POST", ruta: "/api/clases (requiere token)" },
         { metodo: "PUT", ruta: "/api/clases/:id (requiere token)" },
         { metodo: "DELETE", ruta: "/api/clases/:id (requiere token)" },
+        { metodo: "GET", ruta: "/api/clientes" },
+        { metodo: "POST", ruta: "/api/clientes (requiere token)" },
+        { metodo: "POST", ruta: "/api/clientes/:id/checkin (requiere token)" },
+        { metodo: "GET", ruta: "/api/checkins" },
       ],
     });
     return;
@@ -80,6 +86,7 @@ export async function enrutar(req, res) {
     return;
   }
 
+  // ---- Clases: coleccion ----
   if (method === "GET" && pathname === "/api/clases") {
     await manejarListar(req, res);
     return;
@@ -90,6 +97,7 @@ export async function enrutar(req, res) {
     return;
   }
 
+  // ---- Clases: recurso individual (/api/clases/:id) ----
   const idClase = extraerIdDeRuta(pathname, "/api/clases/");
   if (idClase !== null) {
     if (method === "GET") {
@@ -106,6 +114,31 @@ export async function enrutar(req, res) {
       await manejarEliminar(req, res, idClase);
       return;
     }
+  }
+
+  // ---- Clientes: coleccion ----
+  if (method === "GET" && pathname === "/api/clientes") {
+    await manejarListarClientes(req, res);
+    return;
+  }
+  if (method === "POST" && pathname === "/api/clientes") {
+    if (!exigirToken(req, res)) return;
+    await manejarRegistrarCliente(req, res);
+    return;
+  }
+
+  // ---- Clientes: check-in (/api/clientes/:id/checkin) ----
+  const matchCheckin = pathname.match(/^\/api\/clientes\/(\d+)\/checkin$/);
+  if (matchCheckin && method === "POST") {
+    if (!exigirToken(req, res)) return;
+    await manejarCheckin(req, res, Number(matchCheckin[1]));
+    return;
+  }
+
+  // ---- Check-ins: coleccion ----
+  if (method === "GET" && pathname === "/api/checkins") {
+    await manejarListarCheckins(req, res);
+    return;
   }
 
   enviarJSON(res, 404, { mensaje: `Ruta no encontrada: ${method} ${pathname}` });
