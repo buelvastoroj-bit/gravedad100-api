@@ -14,6 +14,16 @@ import {
   manejarCheckin,
   manejarListarCheckins,
 } from "./controllers/clientesController.js";
+import {
+  manejarListarPlanes,
+  manejarCrearPlan,
+  manejarEliminarPlan,
+} from "./controllers/entrenamientoController.js";
+import {
+  manejarListarSolicitudes,
+  manejarRegistrarSolicitud,
+  manejarResolverSolicitud,
+} from "./controllers/solicitudController.js";
 
 /**
  * Enrutador de la API REST del proyecto Gravedad100.
@@ -140,6 +150,41 @@ export async function enrutar(req, res) {
     await manejarListarCheckins(req, res);
     return;
   }
+  // ---- Planes de entrenamiento: coleccion ----
+  if (method === "GET" && pathname === "/api/planes-entrenamiento") {
+    await manejarListarPlanes(req, res);
+    return;
+  }
+  if (method === "POST" && pathname === "/api/planes-entrenamiento") {
+    if (!exigirToken(req, res)) return;
+    await manejarCrearPlan(req, res);
+    return;
+  }
 
+  // ---- Planes de entrenamiento: recurso individual ----
+  const matchPlan = pathname.match(/^\/api\/planes-entrenamiento\/(\d+)$/);
+  if (matchPlan && method === "DELETE") {
+    if (!exigirToken(req, res)) return;
+    await manejarEliminarPlan(req, res, Number(matchPlan[1]));
+    return;
+  }
+    // ---- Solicitudes de atencion: coleccion ----
+  if (method === "GET" && pathname === "/api/solicitudes") {
+    await manejarListarSolicitudes(req, res);
+    return;
+  }
+  if (method === "POST" && pathname === "/api/solicitudes") {
+    if (!exigirToken(req, res)) return;
+    await manejarRegistrarSolicitud(req, res);
+    return;
+  }
+
+  // ---- Solicitudes: resolver ----
+  const matchResolver = pathname.match(/^\/api\/solicitudes\/(\d+)\/resolver$/);
+  if (matchResolver && method === "PUT") {
+    if (!exigirToken(req, res)) return;
+    await manejarResolverSolicitud(req, res, Number(matchResolver[1]));
+    return;
+  }
   enviarJSON(res, 404, { mensaje: `Ruta no encontrada: ${method} ${pathname}` });
 }

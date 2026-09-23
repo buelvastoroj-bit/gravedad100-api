@@ -3,4 +3,6 @@ data/usuarios.json
 data/clases.json
 data/clientes.json
 data/checkins.json
+data/planesEntrenamiento.json
+data/solicitudes.json
 *.log
