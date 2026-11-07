@@ -63,3 +63,13 @@ export function guardarUsuario(nuevoUsuario) {
   usuarios.push(nuevoUsuario);
   guardarTodos(usuarios);
 }
+
+/**
+ * Cuenta cuantos usuarios hay registrados.
+ * Se usa para saber si el registro publico debe estar abierto
+ * (solo cuando todavia no existe ningun usuario).
+ * @returns {number}
+ */
+export function contarUsuarios() {
+  return leerTodos().length;
+}

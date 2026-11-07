@@ -1,5 +1,5 @@
 import { hashearContrasena, verificarContrasena } from "../utils/hash.js";
-import { buscarPorUsuario, guardarUsuario } from "../repositories/usuarioRepository.js";
+import { buscarPorUsuario, guardarUsuario, contarUsuarios } from "../repositories/usuarioRepository.js";
 
 /**
  * Reglas de negocio del registro e inicio de sesion de usuarios.
@@ -17,6 +17,19 @@ export class ErrorDeNegocio extends Error {
     super(mensaje);
     this.codigoEstado = codigoEstado;
   }
+}
+
+/**
+ * Indica si cualquier persona puede registrarse sin iniciar sesion.
+ *
+ * Regla: el registro publico solo esta abierto mientras no exista ningun
+ * usuario, para que se pueda crear la primera cuenta (el administrador).
+ * Despues, solo un usuario con sesion iniciada puede crear cuentas nuevas.
+ *
+ * @returns {boolean}
+ */
+export function registroAbierto() {
+  return contarUsuarios() === 0;
 }
 
 /**
